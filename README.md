@@ -10,7 +10,22 @@ Dependencies:
   
   The libraries (libGD and libpng) must be installed and linked to this project during compilation to support critical functionality
   
+Compilation:
+  - Once you have successfully downloaded and installed the above libraries, run this commmand from the directory in which the source folders
+    for these libraries now exist:  gcc -std=c90 eqn_parser.c -L/libgd-2.3.0 -lgd -L/libpng-1.6.37 -lpng
+  - Running the a.out object file will begin the program
+  
 Current Features:
   - Image I/O using libGD routines
   - Image display using eog
   - 2D image pixelwise operations and new image creation
+  
+Commands:
+  - Read a file into variable 'a'  --> read: a <= image.jpg
+  - Save result image 'c' as name  --> write: c => new_image.jpg
+  - Display named image            --> display: c
+  - 'a' + 'b' = 'c' pixelwise add  --> add: c <= a,b
+  - 'a' - 'b' = 'c' pixelwise sub  --> sub: c <= a,b
+  - 'a' * 'b' = 'c' pixelwise mul  --> mul: c <= a,b
+  - 'a' / 'b' = 'c' pixelwise div  --> div: c <= a,b
+  - clean up, end program          --> stop!
