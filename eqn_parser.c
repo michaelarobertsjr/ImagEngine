@@ -46,10 +46,11 @@ gdImagePtr image_operation_2D(char op[], char img_a[], char img_b[], struct enti
 	   then set the appropriate pixel in the new image to the result
 	*/
 	int k = 0;
-	int l = 0;
+	int l;
 	int post_op;
 	int pix_a, pix_b;
 	for(k; k<a.width; k++){
+		l = 0;
 		for(l; l<a.height; l++){
 
 			pix_a = gdImageTrueColorPixel(a.im, k, l);
