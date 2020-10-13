@@ -59,7 +59,13 @@ gdImagePtr image_operation_2D(char op[], char img_a[], char img_b[], struct enti
 
 			if(!strcmp(op, "add")) post_op = pix_a + pix_b;
 			if(!strcmp(op, "sub")) post_op = pix_a - pix_b;
-			if(!strcmp(op, "div")) post_op = pix_a / pix_b;
+			if(!strcmp(op, "div")){
+				if(pix_b != 0){
+					post_op = pix_a / pix_b;
+				}else{
+					post_op = pix_a;
+				}
+			}
 			if(!strcmp(op, "mul")) post_op = pix_a * pix_b;
 
 			gdImageSetPixel(c, k, l, post_op);
