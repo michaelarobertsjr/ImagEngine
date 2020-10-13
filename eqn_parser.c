@@ -56,8 +56,6 @@ gdImagePtr image_operation_2D(char op[], char img_a[], char img_b[], struct enti
 			pix_a = gdImageTrueColorPixel(a.im, k, l);
 			pix_b = gdImageTrueColorPixel(b_scaled, k, l);
 
-			printf("%d op %d\n", pix_a, pix_b);
-
 			if(!strcmp(op, "add")) post_op = pix_a + pix_b;
 			if(!strcmp(op, "sub")) post_op = pix_a - pix_b;
 			if(!strcmp(op, "div")){
@@ -72,6 +70,7 @@ gdImagePtr image_operation_2D(char op[], char img_a[], char img_b[], struct enti
 			gdImageSetPixel(c, k, l, post_op);
 		}
 	}
+	printf("%s\n", "Image operation has completed, you may now save your image to your machine using the write command");
 	gdImageDestroy(b_scaled);
 	/* Save newly synthesized image to the new_img entity */
 	return c;
