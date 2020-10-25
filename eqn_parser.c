@@ -19,15 +19,47 @@ struct entity {
     gdImagePtr im;
 };
 
-void image_find(struct entity* found, char name[], struct entity (*workspace)[10], int count){
+struct rgb_tuple{
+    int r;
+    int g;
+    int b;
+    int a;
+};
+
+void normalize(struct entity* old_img, gdImagePtr new_img, struct rgb_tuple color_table[][old_img->height], int rH, int rL, int gH, int gL, int bH, int bL){
+	int o = 0;
+        int p;
+	int r,g,b;
+	int final;
+        struct rgb_tuple rgb_curr;
+
+	gdImagePaletteCopy(new_img, old_img->im);
+        for(o; o<old_img->width; o++){
+                p = 0;
+                for(p; p<old_img->height; p++){
+                        rgb_curr = color_table[o][p];
+                        r = (rgb_curr.r - rL)*(255.0/(rH-rL));
+                       	g = (rgb_curr.g - gL)*(255.0/(gH-gL));
+                        b = (rgb_curr.b - bL)*(255.0/(bH-bL));
+
+                        final = gdImageColorClosest(old_img->im, r, g, b);
+
+                        gdImageSetPixel(new_img, o, p, final);
+                }
+        }
+}
+
+struct entity image_find(char name[], struct entity workspace[10], int count){
 	 /* Find entity with given name */
+	 struct entity found;
          int j = 0;
          for(j; j<count; j++){
-         	if(!strcmp(workspace[j]->name, name)){
+         	if(!strcmp(workspace[j].name, name)){
                 	found = workspace[j];
                 	break;
                 }
          }
+	return found;
 }
 
 gdImagePtr image_operation_2D(char op[], char img_a[], char img_b[], struct entity workspace[], int count){
@@ -50,7 +82,6 @@ gdImagePtr image_operation_2D(char op[], char img_a[], char img_b[], struct enti
 
 	/* Scale one of the images to the size of the other */
 	gdImagePtr b_scaled = gdImageScale(b.im, a.width, a.height);
-
 	/* Create new empty image object of like size */
 	gdImagePtr c = gdImageCreateTrueColor(a.width, a.height);
 
@@ -62,6 +93,13 @@ gdImagePtr image_operation_2D(char op[], char img_a[], char img_b[], struct enti
 	int post_op_r, post_op_g, post_op_b, post_op_color;
 	int pix_a_color, pix_b_color;
 	int pix_a_r, pix_a_g, pix_a_b, pix_b_r, pix_b_g, pix_b_b;
+	int r_max = -1000000000;
+	int g_max = -1000000000;
+	int b_max = -1000000000;
+	int r_min = 1000000000;
+	int g_min = 1000000000;
+	int b_min = 1000000000;
+	struct rgb_tuple min_max_arr[a.width][a.height];
 	for(k; k<a.width; k++){
 		l = 0;
 		for(l; l<a.height; l++){
@@ -109,14 +147,25 @@ gdImagePtr image_operation_2D(char op[], char img_a[], char img_b[], struct enti
 				post_op_b = pix_a_b * pix_b_b;
 			}
 
-			printf("%d %d %d\n", post_op_r, post_op_g, post_op_b);
+			/* Add tuple to array for normalization */
+			struct rgb_tuple values;
+			values.r = post_op_r;
+			values.g = post_op_g;
+			values.b = post_op_b;
+			min_max_arr[k][l] = values;
 
-			gdImagePaletteCopy(c, a.im);
-			post_op_color = gdImageColorClosest(a.im, post_op_r, post_op_g, post_op_b);
-			printf("%d\n", post_op_color);
-			gdImageSetPixel(c, k, l, post_op_color);
+			/* Obtain max/min values for r,g,b */
+			if(post_op_r > r_max) r_max = post_op_r;
+			if(post_op_r < r_min) r_min = post_op_r;
+			if(post_op_g > g_max) g_max = post_op_g;
+                        if(post_op_g < g_min) g_min = post_op_g;
+			if(post_op_b > b_max) b_max = post_op_b;
+                        if(post_op_b < b_min) b_min = post_op_b;
+
 		}
 	}
+	normalize(&a, c, min_max_arr, r_max, r_min, g_max, g_min, b_max, b_min);
+
 	printf("%s\n", "Image operation has completed, you may now save your image to your machine using the write command");
 	gdImageDestroy(b_scaled);
 	/* Save newly synthesized image to the new_img entity */
@@ -142,9 +191,9 @@ int main(void){
             "'a' - 'b' = 'c'       pixelwise sub                 --> sub: c <= a,b\n"
             "'a' * 'b' = 'c'       pixelwise mul                 --> mul: c <= a,b\n"
             "'a' / 'b' = 'c'       pixelwise div                 --> div: c <= a,b\n"
-	    "normalize pixel range of 'c', save to 'd'           --> normalize: d <= c"
-	    "brighten 'e' by factor 'f', save to  'g'            --> brighten:  g <= e,f"
-	    "use histogram equalization on 'h', save to 'i'      --> equalize:  i <= h"
+	    "normalize pixel range of 'c', save to 'd'           --> normalize: d <= c\n"
+	    "brighten 'e' by factor 'f', save to  'g'            --> brighten:  g <= e,f\n"
+	    "use histogram equalization on 'h', save to 'i'      --> equalize:  i <= h\n"
             "clean up, end program                --> stop!\n\n");
 
   	while(run){
@@ -188,14 +237,15 @@ int main(void){
 			printf("GD can read/write implied type:  %d\n", read);
 
 			/* Save the parsed relative filepath to the new entity object*/
+			printf("%s\n", relative);
 			strcpy(new_img.filename, relative);
 
 			/* Create a gdImage object from the input file, change it to greyscale
 			   and add it to our entity object
 			*/
 			gdImagePtr im = gdImageCreateFromFile(relative);
-			int error = gdImageGrayScale(im);
-			printf("Image now in Greyscale: %d\n", error);
+			/*int error = gdImageGrayScale(im);
+			printf("Image now in Greyscale: %d\n", error);*/
 
 			new_img.im = im;
 			new_img.width = gdImageSX(im);
@@ -252,6 +302,11 @@ int main(void){
 			/* Find entity with given name */
 			int j = 0;
 
+			/* Check to ensure trailing newline character does not interfere with file open routine */
+                        if(res_words[1][strlen(res_words[1]) - 1] == '\n'){
+                                res_words[1][strlen(res_words[1]) - 1] = '\0';
+                        }
+
 			for(j; j<index; j++){
 				if(!strcmp(entities[j].name, res_words[1])){
 					temp = entities[j];
@@ -277,11 +332,16 @@ int main(void){
 			struct entity new_img;
 			strcpy(new_img.name, res_words[1]);
 
+			 /* Check to ensure trailing newline character does not interfere with file open routine */
+                        if(res_words[3][strlen(res_words[3]) - 1] == '\n'){
+                                res_words[3][strlen(res_words[3]) - 1] = '\0';
+                        }
+
 			/* Perform operation with the referenced images in the workspace to produce a new image object */
 			gdImagePtr im = image_operation_2D(res_words[0], res_words[2], res_words[3], entities, index);
 			new_img.im = im;
-				new_img.width = gdImageSX(im);
-				new_img.height = gdImageSY(im);
+			new_img.width = gdImageSX(im);
+			new_img.height = gdImageSY(im);
 
 			entities[index] = new_img;
 			index++;
@@ -300,7 +360,12 @@ int main(void){
 			struct entity new_img, old_img;
 			strcpy(new_img.name, res_words[1]);
 
-			image_find(&old_img, res_words[2], &entities, index);
+			/* Check to ensure trailing newline character does not interfere with name check */
+                        if(res_words[2][strlen(res_words[2]) - 1] == '\n'){
+                                res_words[2][strlen(res_words[2]) - 1] = '\0';
+                        }
+
+			old_img = image_find(res_words[2], entities, index);
 
 			/* Iterate over found image to gather values for max and min */
 
@@ -309,12 +374,13 @@ int main(void){
 			int m = 0;
 			int n;
 			int r_min = 1000000000;
-			int r_max = -1;
+			int r_max = -1000000000;
 			int g_min = 1000000000;
-			int g_max = -1;
+			int g_max = -1000000000;
 			int b_min = 1000000000;
-			int b_max = -1;
+			int b_max = -1000000000;
 			int pix_r, pix_g, pix_b, color;
+			struct rgb_tuple min_max_arr[old_img.width][old_img.height]; 
 			for(m; m<old_img.width; m++){
                 		n = 0;
                 		for(n; n<old_img.height; n++){
@@ -323,6 +389,13 @@ int main(void){
 					pix_r = gdImageRed(old_img.im, color);
 					pix_g = gdImageGreen(old_img.im, color);
 					pix_b = gdImageBlue(old_img.im, color);
+
+					/* Add tuple to array for normalization */
+                        		struct rgb_tuple values;
+                        		values.r = pix_r;
+                        		values.g = pix_g;
+                       			values.b = pix_b;
+                        		min_max_arr[m][n] = values;
 
 					if(pix_r > r_max) r_max = pix_r;
 					if(pix_r < r_min) r_min = pix_r;
@@ -333,38 +406,14 @@ int main(void){
 				}
 			}
 
-			printf("%d %d, %d %d, %d %d\n", r_min, r_max, g_min, g_max, b_min, b_max);
-			/* Calculate palette scaling factor (0->255)*/
-			int scale_r = 255/(r_max - r_min);
-			int scale_g = 255/(g_max - g_min);
-			int scale_b = 255/(b_max - b_min);
-
-			printf("%d %d %d\n", scale_r, scale_g, scale_b);
-
 			gdImagePtr normalized = gdImageCreateTrueColor(old_img.width, old_img.height);
-			/*int error = gdImageGrayScale(normalized);*/
 
-			m = 0;
-			int post_op_color;
-			for(m; m<old_img.width; m++){
-				n = 0;
-				for(n; n<old_img.height; n++){
-					color = gdImageGetPixel(old_img.im, m, n);
+			/* Call normalization function, specifying rgb ranges */
+			normalize(&old_img, normalized, min_max_arr, r_max, r_min, g_max, g_min, b_max, b_min);
+ 
+			printf("Min/Max: %d %d, %d %d, %d %d\n", r_min, r_max, g_min, g_max, b_min, b_max);
 
-                                        pix_r = gdImageRed(old_img.im, color);
-                                        pix_g = gdImageGreen(old_img.im, color);
-                                        pix_b = gdImageBlue(old_img.im, color);
-
-					pix_r = (pix_r - r_min)*scale_r;
-					pix_g = (pix_g - g_min)*scale_g;
-					pix_b = (pix_b - b_min)*scale_b;
-
-					post_op_color = gdImageColorClosest(old_img.im, pix_r, pix_g, pix_b);
-                        		gdImageSetPixel(normalized, m, n, post_op_color);
-
-				}
-			}
-
+			/* Iterate over image once again and apply transformation over the pixels*/
 			new_img.im = normalized;
 			entities[index] = new_img;
 			index++;
@@ -375,13 +424,14 @@ int main(void){
 		/* Brightening Function, brighten the rgb values in each pixel by an input integer*/ 
 		if(!strcmp(res_words[0], "brighten")){
 			/* Find the requested image in the workspace */
-			struct entity new_img, old_img;
+			struct entity new_img;
+			struct entity old_img;
                         strcpy(new_img.name, res_words[1]);
 
-                        image_find(&old_img, res_words[2], &entities, index);
-
+                        old_img = image_find(res_words[2], entities, index);
 			/* Increase every pixel rgb value by the input integer */
-			new_img.im = old_img.im;
+			gdImagePtr temp = gdImageCreateFromFile(old_img.filename);
+
 			new_img.width = old_img.width;
 			new_img.height = old_img.height;
 
@@ -389,8 +439,11 @@ int main(void){
                                 res_words[3][strlen(res_words[3]) - 1] = '\0';
                         }
 
-			int error = gdImageBrightness(old_img.im, atoi(res_words[3]));
+			int error = gdImageBrightness(temp, atoi(res_words[3]));
+			new_img.im = temp;
 			printf("Image successfully brightened: %d\n", error);
+
+			/*old_img.im = gdImageCreateFromFile(old_img.filename);*/
 
 			entities[index] = new_img;
 			index++;
