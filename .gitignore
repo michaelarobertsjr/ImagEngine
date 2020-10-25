@@ -1,0 +1,10 @@
+# Ignore all image test files
+*.png
+*.gif
+*.gd
+*.jpeg
+*.bmp
+*.tiff
+
+# Ignore output object files
+*.out
