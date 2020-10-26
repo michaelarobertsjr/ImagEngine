@@ -334,12 +334,6 @@ int main(void){
 
 			entities[index] = new_img;
 			index++;
-			/*
-			if(result){
-				printf("Image operation successful: %s is now in the workspace\n", res_words[0]);
-			}else{
-				printf("%s\n", "Image operation encountered an error");
-			}*/
 		}
 	 	 /* Normalize the the pixel range of the given image to greyscaled 0 --> 255, corrects
 	            overflow after image operations
@@ -395,7 +389,7 @@ int main(void){
 
 				/* Call normalization function, specifying rgb ranges */
 				normalize(&old_img, normalized, min_max_arr, r_max, r_min, g_max, g_min, b_max, b_min);
- 
+
 				printf("Min/Max: %d %d, %d %d, %d %d\n", r_min, r_max, g_min, g_max, b_min, b_max);
 
 				/* Iterate over image once again and apply transformation over the pixels*/
@@ -433,6 +427,77 @@ int main(void){
                                 index++;
 
 				printf("Image successfully brightened: %d\n", error);
+			}else{
+				printf("Image entity not found in workspace\n");
+			}
+		}
+		/* Equalize the values making up the cumulative frequency plot of the image, by iterating
+		through them and multiplying them by a scaling factor relative to their frequency, resulting
+		in a linear distribution.  This operation can only be done on a single channel, so it is
+		performed on a grayscaled copy of the original image so r = g = b
+		*/
+		if(!strcmp(res_words[0], "equalize")){
+			/* Find the requested image in the workspace */
+			struct entity new_img, old_img;
+			int x, y;
+			int pix_c, pix_r;
+			int error, final, weighted;
+			int count = 0;
+			float freq[256] = {0};
+			float ratio;
+			strcpy(new_img.name, res_words[1]);
+
+			old_img = image_find(res_words[2], entities, index);
+			if(old_img.im != NULL){
+				/* Image found, iterate through pixels and collect intensity frequencies for r,g,b*/
+				gdImagePtr temp = gdImageCreateFromFile(old_img.filename);
+				new_img.width = old_img.width;
+				new_img.height = old_img.height;
+
+				error = gdImageGrayScale(temp);
+				printf("Image grayscaled: %d\n", error);
+
+				x = 0;
+				for(x; x<new_img.width; x++){
+					y = 0;
+					for(y; y<new_img.height; y++){
+						/* Increment through r intensity values and keep track of the totals 
+						of each intensity
+						*/
+						pix_c = gdImageGetPixel(temp, x, y);
+						pix_r = gdImageRed(temp, pix_c);
+						freq[pix_r] = freq[pix_r] + 1;
+					}
+				}
+				x = 0;
+				/* Iterate through frequency array and change them into cumulative frequency values */
+				for(x; x<256; x++){
+					count = count + (int) freq[x];
+					ratio = ((float) count)/((float) (new_img.width * new_img.height));
+					freq[x] = ratio;
+				}
+				/* Iterate back through new_img, multiplying each r,g,b by it's relative cumulative
+				frequency value, then synthesizing a color number from it and storing it in the
+				new image pixel array
+				*/
+				x = 0;
+				for(x; x<new_img.width; x++){
+                                        y = 0;
+                                        for(y; y<new_img.height; y++){
+                                                pix_c = gdImageGetPixel(temp, x, y);
+                                                pix_r = gdImageRed(temp, pix_c);
+
+						weighted = (int) (((float) pix_r) * freq[pix_r]);
+
+						final = gdImageColorClosest(temp, weighted, weighted, weighted);
+
+                        			gdImageSetPixel(temp, x, y, final);
+                                        }
+                                }
+				printf("Image intensities successfully equalized\n");
+				new_img.im = temp;
+				entities[index] = new_img;
+				index++;
 			}else{
 				printf("Image entity not found in workspace\n");
 			}
