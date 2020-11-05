@@ -82,6 +82,7 @@ gdImagePtr image_operation_2D(char op[], char img_a[], char img_b[], struct enti
 		/* LibGD Image Manipulation Functions */
 
 		/* Scale one of the images to the size of the other */
+		gdImageSetInterpolationMethod(b.im, GD_BSPLINE);
 		gdImagePtr b_scaled = gdImageScale(b.im, a.width, a.height);
 		/* Create new empty image object of like size */
 		gdImagePtr c = gdImageCreateTrueColor(a.width, a.height);
@@ -181,9 +182,9 @@ int main(void){
            " with any of the following input commands (Enter key to run).\n\n");
 
     printf("Examples:\n"
-            "Reads a file into variable 'a' --> read: a <= image.jpg\n"
-            "Save result image 'c' as name  --> write: c => new_image.jpg\n"
-            "Display named image            --> display: c\n"
+            "Reads a file into variable 'a'                      --> read: a <= image.jpg\n"
+            "Save result image 'c' as name                       --> write: c => new_image.jpg\n"
+            "Display named image                                 --> display: c\n"
             "'a' + 'b' = 'c'       pixelwise add                 --> add: c <= a,b\n"
             "'a' - 'b' = 'c'       pixelwise sub                 --> sub: c <= a,b\n"
             "'a' * 'b' = 'c'       pixelwise mul                 --> mul: c <= a,b\n"
@@ -191,6 +192,10 @@ int main(void){
 	    "normalize pixel range of 'c', save to 'd'           --> normalize: d <= c\n"
 	    "brighten 'e' by factor 'f', save to  'g'            --> brighten:  g <= e,f\n"
 	    "use histogram equalization on 'h', save to 'i'      --> equalize:  i <= h\n"
+	    "magnify an image 'j' by factor 'k', save to 'l'     --> magnify: l <= j,k\n"
+	    "minify an image 'j' by factor 'k', save to 'l'      --> minify: l <= j,k\n"
+	    "rotate an image 'm' by an angle 'n', save to 'o'    --> rotate: o <= m,n\n"
+	    "flip an image 'p' upon the y-axis, save to 'q'      --> flip: q <= p\n"
             "clean up, end program                --> stop!\n\n");
 
   	while(run){
@@ -501,6 +506,84 @@ int main(void){
 			}else{
 				printf("Image entity not found in workspace\n");
 			}
+		}
+		/* Rotate an image an input amount of degrees, counterclockwise */
+		if(!strcmp(res_words[0], "rotate")){
+			/* Find the requested image in the workspace */
+                        struct entity new_img;
+                        struct entity old_img;
+			int background;
+                        strcpy(new_img.name, res_words[1]);
+
+			old_img = image_find(res_words[2], entities, index);
+
+			/* Rotate image */
+			background = gdImageColorClosest(old_img.im, 0, 0, 0);
+			new_img.im = gdImageRotateInterpolated(old_img.im, atof(res_words[3]), background);
+			new_img.height = gdImageSY(new_img.im);
+                        new_img.width = gdImageSX(new_img.im);
+
+			printf("Image successfully rotated\n");
+
+			entities[index] = new_img;
+			index++;
+
+		}
+		/* Flip an image upside down by complementing the position of the pixels */
+		if(!strcmp(res_words[0], "flip")){
+			/* Find the requested image in the workspace */
+                        struct entity new_img;
+                        struct entity old_img;
+			int pix_a, pix_b;
+			int x, y;
+                        strcpy(new_img.name, res_words[1]);
+
+                        old_img = image_find(res_words[2], entities, index);
+			new_img.height = old_img.height;
+			new_img.width = old_img.width;
+
+			/* Iterate through pixels, and for each find the complement of its position along the y-axis
+			   and swap it with the pixel at that location */
+			gdImagePtr temp = gdImageCreateTrueColor(new_img.width, new_img.height);
+			x = 0;
+                        for(x; x<old_img.width; x++){
+                       		y = 0;
+                                for(y; y<old_img.height; y++){
+                                        pix_a = gdImageGetPixel(old_img.im, x, y);
+					pix_b = gdImageGetPixel(old_img.im, x, old_img.height - 1 - y);
+
+					gdImageSetPixel(temp, x, new_img.height - 1 - y, pix_a);
+					gdImageSetPixel(temp, x, y, pix_b);
+				}
+			}
+			new_img.im = temp;
+
+			printf("Image successfully flipped along the y-axis\n");
+			entities[index] = new_img;
+			index++;
+
+		}
+		/* Magnify/Minify an image's size using bicubic spline interpolation */
+		if(!strcmp(res_words[0], "magnify") || !strcmp(res_words[0], "minify")){
+			/* Find the requested image in the workspace */
+                        struct entity new_img;
+                        struct entity old_img;
+                        strcpy(new_img.name, res_words[1]);
+                        int factor = atoi(res_words[3]);
+			new_img.width = old_img.width * factor;
+			new_img.height = old_img.height * factor;
+
+                        old_img = image_find(res_words[2], entities, index);
+
+			/* Magnify/Minify */
+                        gdImageSetInterpolationMethod(old_img.im, GD_BSPLINE);
+                        new_img.im = gdImageScale(old_img.im, new_img.height, new_img.width);
+
+			printf("Image successfully scaled\n");
+
+			entities[index] = new_img;
+			index++;
+
 		}
 		if(!strcmp(res_words[0], "stop")){
 			/* Free memory associated with images opened during the program, then exit */
