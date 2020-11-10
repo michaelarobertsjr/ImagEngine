@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "../../libpng-1.6.37/png.h"
 #include "../../libgd-2.3.0/src/gd.h"
 
@@ -196,6 +197,9 @@ int main(void){
 	    "minify an image 'j' by factor 'k', save to 'l'      --> minify: l <= j,k\n"
 	    "rotate an image 'm' by an angle 'n', save to 'o'    --> rotate: o <= m,n\n"
 	    "flip an image 'p' upon the y-axis, save to 'q'      --> flip: q <= p\n"
+	    "perform sobel edge detection on 'r', save to 's'    --> sobel: s <= r\n"
+	    "perform prewitt edge detection on 'r', save to 's'  --> prewitt: s <= r\n"
+            "perform kirsch edge detection on 'r', save to 's'   --> kirsch: s <= r\n"
             "clean up, end program                --> stop!\n\n");
 
   	while(run){
@@ -570,20 +574,134 @@ int main(void){
                         struct entity old_img;
                         strcpy(new_img.name, res_words[1]);
                         int factor = atoi(res_words[3]);
-			new_img.width = old_img.width * factor;
-			new_img.height = old_img.height * factor;
 
                         old_img = image_find(res_words[2], entities, index);
 
 			/* Magnify/Minify */
                         gdImageSetInterpolationMethod(old_img.im, GD_BSPLINE);
-                        new_img.im = gdImageScale(old_img.im, new_img.height, new_img.width);
+			if(!strcmp(res_words[0], "magnify")){
+				new_img.width = old_img.width * factor;
+                        	new_img.height = old_img.height * factor;
+                        	new_img.im = gdImageScale(old_img.im, new_img.height, new_img.width);
+			}else{
+				new_img.width = old_img.width / factor;
+                                new_img.height = old_img.height / factor;
+                                new_img.im = gdImageScale(old_img.im, new_img.height, new_img.width);
+			}
 
 			printf("Image successfully scaled\n");
 
 			entities[index] = new_img;
 			index++;
 
+		}
+		/* Modify an image to show edges more clearly using the sobel operator */
+		if(!strcmp(res_words[0], "sobel")){
+                         /* Find the requested image in the workspace */
+                        struct entity new_img;
+                        struct entity old_img;
+			int error, final, x, y, pix_a, pix_b, pix_ar, pix_br;
+			float weighted;
+			gdImagePtr gx, gy, temp;
+                        strcpy(new_img.name, res_words[1]);
+			new_img.width = old_img.width;
+			new_img.height = old_img.height;
+
+                        old_img = image_find(res_words[2], entities, index);
+                        if(old_img.im != NULL){
+				float gx_matrix[3][3] = {{1, 0, -1},{2, 0, -2},{1, 0, -1}};
+				float gy_matrix[3][3] = {{1, 2, 1},{0, 0, 0},{-1, -2, -1}};
+
+				gx = gdImageCreateFromFile(old_img.filename);
+				gy = gdImageCreateFromFile(old_img.filename);
+
+				gdImageGrayScale(gx);
+				gdImageGrayScale(gy);
+
+				error = gdImageConvolution(gx, gx_matrix, 1.0, 0.0);
+				printf("gx created %d\n", error);
+				error = gdImageConvolution(gy, gy_matrix, 1.0, 0.0);
+				printf("gy created %d\n", error);
+
+				temp = gdImageCreateFromFile(old_img.filename);
+				gdImageGrayScale(temp);
+                        	x = 0;
+                        	for(x; x<old_img.width; x++){
+                                	y = 0;
+                                	for(y; y<old_img.height; y++){
+                                        	pix_a = gdImageGetPixel(gx, x, y);
+                                        	pix_b = gdImageGetPixel(gy, x, y);
+
+						pix_ar = gdImageRed(gx, pix_a);
+                                                pix_br = gdImageRed(gy, pix_b);
+
+						weighted = sqrt((pix_ar * pix_ar) + (pix_br * pix_br));
+
+                                                final = gdImageColorClosest(temp, (int)weighted, (int)weighted, (int)weighted);
+                                        	gdImageSetPixel(temp, x, y, final);
+                                	}
+                        	}
+				new_img.im = temp;
+				entities[index] = new_img;
+				index++;
+				printf("Sobel operation complete, new image exists\n");
+			}else{
+				printf("Referenced image not found in workspace\n");
+			}
+		}
+		/* Modify an image to show edges more clearly using the prewitt operator */
+                if(!strcmp(res_words[0], "prewitt")){
+                         /* Find the requested image in the workspace */
+                        struct entity new_img;
+                        struct entity old_img;
+                        int error, final, x, y, pix_a, pix_b, pix_ar, pix_br;
+                        float weighted;
+                        gdImagePtr gx, gy, temp;
+                        strcpy(new_img.name, res_words[1]);
+                        new_img.width = old_img.width;
+                        new_img.height = old_img.height;
+
+                        old_img = image_find(res_words[2], entities, index);
+                        if(old_img.im != NULL){
+                                float gx_matrix[3][3] = {{1, 0, -1},{1, 0, -1},{1, 0, -1}};
+                                float gy_matrix[3][3] = {{1, 1, 1},{0, 0, 0},{-1, -1, -1}};
+
+                                gx = gdImageCreateFromFile(old_img.filename);
+                                gy = gdImageCreateFromFile(old_img.filename);
+
+                                gdImageGrayScale(gx);
+                                gdImageGrayScale(gy);
+
+                                error = gdImageConvolution(gx, gx_matrix, 1.0, 0.0);
+                                printf("gx created %d\n", error);
+				error = gdImageConvolution(gy, gy_matrix, 1.0, 0.0);
+                                printf("gy created %d\n", error);
+
+                                temp = gdImageCreateFromFile(old_img.filename);
+                                gdImageGrayScale(temp);
+                                x = 0;
+                                for(x; x<old_img.width; x++){
+                                        y = 0;
+                                        for(y; y<old_img.height; y++){
+                                                pix_a = gdImageGetPixel(gx, x, y);
+                                                pix_b = gdImageGetPixel(gy, x, y);
+
+                                                pix_ar = gdImageRed(gx, pix_a);
+                                                pix_br = gdImageRed(gy, pix_b);
+
+                                                weighted = sqrt((pix_ar * pix_ar) + (pix_br * pix_br));
+
+                                                final = gdImageColorClosest(temp, (int)weighted, (int)weighted, (int)weighted);
+                                    		gdImageSetPixel(temp, x, y, final);
+                                        }
+                                }
+                                new_img.im = temp;
+                                entities[index] = new_img;
+                                index++;
+                                printf("Prewitt operation complete, new image exists\n");
+                        }else{
+                                printf("Referenced image not found in workspace\n");
+                        }
 		}
 		if(!strcmp(res_words[0], "stop")){
 			/* Free memory associated with images opened during the program, then exit */
