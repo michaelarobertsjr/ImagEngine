@@ -22,14 +22,18 @@ Current Features:
   - Image normalization, brightening, and histogram equalization operations
   
 Commands:
-  - Read a file into variable 'a'                  --> read: a <= image.jpg
-  - Save result image 'c' as name                  --> write: c => new_image.jpg
-  - Display named image                            --> display: c
-  - 'a' + 'b' = 'c' pixelwise add                  --> add: c <= a,b
-  - 'a' - 'b' = 'c' pixelwise sub                  --> sub: c <= a,b
-  - 'a' * 'b' = 'c' pixelwise mul                  --> mul: c <= a,b
-  - 'a' / 'b' = 'c' pixelwise div                  --> div: c <= a,b
-  - normalize pixel range of 'c', save to 'd'      --> normalize: d <= c
-  - brighten 'e' by integer 'f', save to 'g'       --> brighten:  g <= e,f
-  - use histogram equalization on 'h', save to 'i' --> equalize:  i <= h
+  - Read a file into variable 'a'                   --> read: a <= image.jpg
+  - Save result image 'c' as name                   --> write: c => new_image.jpg
+  - Display named image                             --> display: c
+  - 'a' + 'b' = 'c' pixelwise add                   --> add: c <= a,b
+  - 'a' - 'b' = 'c' pixelwise sub                   --> sub: c <= a,b
+  - 'a' * 'b' = 'c' pixelwise mul                   --> mul: c <= a,b
+  - 'a' / 'b' = 'c' pixelwise div                   --> div: c <= a,b
+  - normalize pixel range of 'c', save to 'd'       --> normalize: d <= c
+  - brighten 'e' by integer 'f', save to 'g'        --> brighten:  g <= e,f
+  - use histogram equalization on 'h', save to 'i'  --> equalize:  i <= h
+  - magnify an image 'j' by factor 'k', save to 'l' --> magnify: l <= j,k
+  - minify an image 'j' by factor 'k', save to 'l'  --> minify: l <= j,k
+  - rotate an image 'm' by an angle 'n', save to 'o'--> rotate: o <= m,n
+  - flip an image 'p' upon the y-axis, save to 'q'  --> flip: q <= p
   - clean up, end program          --> stop!
