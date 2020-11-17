@@ -199,7 +199,7 @@ int main(void){
 	    "flip an image 'p' upon the y-axis, save to 'q'      --> flip: q <= p\n"
 	    "perform sobel edge detection on 'r', save to 's'    --> sobel: s <= r\n"
 	    "perform prewitt edge detection on 'r', save to 's'  --> prewitt: s <= r\n"
-            "perform kirsch edge detection on 'r', save to 's'   --> kirsch: s <= r\n"
+            "perform Wkirsch edge detection on 'r', save to 's'   --> kirsch: s <= r\n"
             "clean up, end program                --> stop!\n\n");
 
   	while(run){
@@ -645,6 +645,9 @@ int main(void){
 				entities[index] = new_img;
 				index++;
 				printf("Sobel operation complete, new image exists\n");
+
+				gdImageDestroy(gx);
+				gdImageDestroy(gy);
 			}else{
 				printf("Referenced image not found in workspace\n");
 			}
@@ -699,9 +702,84 @@ int main(void){
                                 entities[index] = new_img;
                                 index++;
                                 printf("Prewitt operation complete, new image exists\n");
+
+				gdImageDestroy(gx);
+				gdImageDestroy(gy);
                         }else{
                                 printf("Referenced image not found in workspace\n");
                         }
+		}
+		/* Modify the image to show edges more clearly using the kirsch operator */
+		if(!strcmp(res_words[0], "kirsch")){
+			/* Find the requested image in the workspace */
+                        struct entity new_img;
+                        struct entity old_img;
+                        int error, final, x, y, z, max, pix, pix_r;
+                        gdImagePtr temp;
+			gdImagePtr direction_images[8];
+                        strcpy(new_img.name, res_words[1]);
+                        new_img.width = old_img.width;
+                        new_img.height = old_img.height;
+
+                        old_img = image_find(res_words[2], entities, index);
+                        if(old_img.im != NULL){
+				/* Define direction matrices for use in convolution */
+				float direction_matrices[8][3][3] = {
+					{{5, 5, 5},{-3, 0, -3},{-3, -3, -3}},    /*N*/
+					{{5, 5, -3},{5, 0, -3},{-3, -3, -3}},    /*NW*/
+					{{5, -3, -3},{5, 0, -3},{5, -3, -3}},    /*W*/
+                                        {{-3, -3, -3},{5, 0, -3},{5, 5, -3}},    /*SW*/
+					{{-3, -3, -3},{-3, 0, -3},{5, 5, 5}},    /*S*/
+                                        {{-3, -3, -3},{-3, 0, 5},{-3, 5, 5}},    /*SE*/
+                                        {{-3, -3, 5},{-3, 0, 5},{-3, -3, 5}},    /*E*/
+                                        {{-3, 5, 5},{-3, 0, 5},{-3, -3, -3}}     /*NE*/
+				};
+
+				/* Create temporary images to represent the convolutions for each direction */
+                                x = 0;
+				for(x; x<8; x++){
+					temp = gdImageCreateFromFile(old_img.filename);
+					gdImageGrayScale(temp);
+
+					error = gdImageConvolution(temp, direction_matrices[x], 1.0, 0.0);
+					printf("Direction matrix %d created\n", x);
+					direction_images[x] = temp;
+				}
+
+				/* Find maximum value at each pixel, save result to new image */
+				x = 0;
+				max = 0;
+				temp = gdImageCreateFromFile(old_img.filename);
+				for(x; x<old_img.width; x++){
+					y = 0;
+					for(y; y<old_img.height; y++){
+						z = 0;
+						max = 0;
+						for(z; z<8; z++){
+							pix = gdImageGetPixel(direction_images[z], x, y);
+							if(gdImageRed(direction_images[z], pix) > max){
+								max = gdImageRed(direction_images[z], pix);
+							}
+						}
+
+						final = gdImageColorClosest(direction_images[0], max, max, max);
+						gdImageSetPixel(temp, x, y, final);
+					}
+				}
+				/* Add newly created image to workspace */
+				new_img.im = temp;
+				entities[index] = new_img;
+				index++;
+				printf("Kirsch operation complete, new image exists\n");
+
+				/* Reclaim memory from temporary images */
+				x = 0;
+				for(x; x<index; x++){
+                               		gdImageDestroy(direction_images[x]);
+				}
+			}else{
+				printf("Referenced image not found in workspace\n");
+			}
 		}
 		if(!strcmp(res_words[0], "stop")){
 			/* Free memory associated with images opened during the program, then exit */
