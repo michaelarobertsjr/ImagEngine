@@ -199,7 +199,7 @@ int main(void){
 	    "flip an image 'p' upon the y-axis, save to 'q'      --> flip: q <= p\n"
 	    "perform sobel edge detection on 'r', save to 's'    --> sobel: s <= r\n"
 	    "perform prewitt edge detection on 'r', save to 's'  --> prewitt: s <= r\n"
-            "perform Wkirsch edge detection on 'r', save to 's'   --> kirsch: s <= r\n"
+            "perform kirsch edge detection on 'r', save to 's'   --> kirsch: s <= r\n"
             "clean up, end program                --> stop!\n\n");
 
   	while(run){
