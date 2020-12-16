@@ -66,3 +66,7 @@ Commands:
   - perform kirsch edge detection on 'r', save to 's'  --> kirsch: s <= r
   - clean up, end program                              --> stop!
   
+  Notes:
+  Reusing assigned image object names (a,b,c,etc.) as the output on successive commands (e.g., "overwriting" 'd'  by running
+  normalize: d <= c followed by minify: d <= b) can cause undefined behavior.
+  
