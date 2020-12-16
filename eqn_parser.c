@@ -50,6 +50,7 @@ void normalize(struct entity* old_img, gdImagePtr new_img, struct rgb_tuple **co
 struct entity image_find(char name[], struct entity workspace[100], int count){
 	 /* Find entity with given name */
 	 struct entity found;
+	 found.im = NULL;
          int j = 0;
          for(j; j<count; j++){
          	if(!strcmp(workspace[j].name, name)){
@@ -172,6 +173,7 @@ gdImagePtr image_operation_2D(char op[], char img_a[], char img_b[], struct enti
 		return c;
 	}else{
 		printf("One or more image entities not found in workspace\n");
+		return NULL; 
 	}
 }
 
@@ -304,6 +306,7 @@ int main(void){
 		/* Pops up a window to display the given image - eog */
 		if(!strcmp(res_words[0], "display")){
 			struct entity temp;
+			temp.im = NULL;
 			/* Find entity with given name */
 			int j = 0;
 
@@ -344,19 +347,26 @@ int main(void){
 
 			struct entity new_img;
 			strcpy(new_img.name, res_words[1]);
+			if(strcmp(res_words[2], "") && strcmp(res_words[3], "")){
+				/* Perform operation with the referenced images in the workspace to produce a new image object */
+				gdImagePtr im = image_operation_2D(res_words[0], res_words[2], res_words[3], entities, index);
+				if(im != NULL){
+					new_img.im = im;
+					new_img.width = gdImageSX(im);
+					new_img.height = gdImageSY(im);
 
-			/* Perform operation with the referenced images in the workspace to produce a new image object */
-			gdImagePtr im = image_operation_2D(res_words[0], res_words[2], res_words[3], entities, index);
-			new_img.im = im;
-			new_img.width = gdImageSX(im);
-			new_img.height = gdImageSY(im);
+					entities[index] = new_img;
+					index++;
 
-			entities[index] = new_img;
-			index++;
-
-			gettimeofday(&stop, NULL);
-			printf("%f difference\n", ((double) (stop.tv_sec - start.tv_sec) * 1000) 
-			+ ((double) (stop.tv_usec - start.tv_usec) /1000));
+					gettimeofday(&stop, NULL);
+					printf("%f difference\n", ((double) (stop.tv_sec - start.tv_sec) * 1000) 
+					+ ((double) (stop.tv_usec - start.tv_usec) /1000));
+				}else{
+					printf("There was an error while performing the arithmetic operation\n");
+				}
+			}else{
+				printf("This operation requires two image objects to complete\n");
+			}
 		}
 	 	 /* Normalize the the pixel range of the given image to greyscaled 0 --> 255, corrects
 	            overflow after image operations
@@ -432,7 +442,7 @@ int main(void){
 
 				printf("Min/Max: %d %d, %d %d, %d %d\n", r_min, r_max, g_min, g_max, b_min, b_max);
 
-				/* Iterate over image once again and apply transformation over the pixels*/
+				/* Iterate over image once again and apply transformation over the pixels*/ 
 				if(normalized != NULL){
 					new_img.im = normalized;
 					entities[index] = new_img;
@@ -462,25 +472,29 @@ int main(void){
 			struct entity old_img;
                         strcpy(new_img.name, res_words[1]);
 
-                        old_img = image_find(res_words[2], entities, index);
-			/* Increase every pixel rgb value by the input integer */
-			if(old_img.im != NULL){
-				gdImagePtr temp = gdImageClone(old_img.im);
-				new_img.width = old_img.width;
-				new_img.height = old_img.height;
+			if(strcmp(res_words[2], "") && strcmp(res_words[3], "")){
+                        	old_img = image_find(res_words[2], entities, index);
+				/* Increase every pixel rgb value by the input integer */
+				if(old_img.im != NULL){
+					gdImagePtr temp = gdImageClone(old_img.im);
+					new_img.width = old_img.width;
+					new_img.height = old_img.height;
 
-				int error = gdImageBrightness(temp, atoi(res_words[3]));
-				new_img.im = temp;
-				entities[index] = new_img;
-                                index++;
+					int error = gdImageBrightness(temp, atoi(res_words[3]));
+					new_img.im = temp;
+					entities[index] = new_img;
+                                	index++;
 
-				printf("Image successfully brightened: %d\n", error);
+					printf("Image successfully brightened: %d\n", error);
 
-				gettimeofday(&stop, NULL);
-                        	printf("%f difference\n", ((double) (stop.tv_sec - start.tv_sec) * 1000)
-                        	+ ((double) (stop.tv_usec - start.tv_usec) /1000));
+					gettimeofday(&stop, NULL);
+                        		printf("%f difference\n", ((double) (stop.tv_sec - start.tv_sec) * 1000)
+                        		+ ((double) (stop.tv_usec - start.tv_usec) /1000));
+				}else{
+					printf("Image entity not found in workspace\n");
+				}
 			}else{
-				printf("Image entity not found in workspace\n");
+				printf("This operation requires an image object and an intensity value to complete\n");
 			}
 		}
 		/* Equalize the values making up the cumulative frequency plot of the image, by iterating
@@ -576,25 +590,29 @@ int main(void){
 			int background;
                         strcpy(new_img.name, res_words[1]);
 
-			old_img = image_find(res_words[2], entities, index);
+			if(strcmp(res_words[2], "") && strcmp(res_words[3], "")){
+				old_img = image_find(res_words[2], entities, index);
 
-			if(old_img.im != NULL){
-				/* Rotate image */
-				background = gdImageColorClosest(old_img.im, 0, 0, 0);
-				new_img.im = gdImageRotateInterpolated(old_img.im, atof(res_words[3]), background);
-				new_img.height = gdImageSY(new_img.im);
-                        	new_img.width = gdImageSX(new_img.im);
+				if(old_img.im != NULL){
+					/* Rotate image */
+					background = gdImageColorClosest(old_img.im, 0, 0, 0);
+					new_img.im = gdImageRotateInterpolated(old_img.im, atof(res_words[3]), background);
+					new_img.height = gdImageSY(new_img.im);
+                        		new_img.width = gdImageSX(new_img.im);
 
-				printf("Image successfully rotated\n");
+					printf("Image successfully rotated\n");
 
-				entities[index] = new_img;
-				index++;
+					entities[index] = new_img;
+					index++;
 
-				gettimeofday(&stop, NULL);
-                        	printf("%f difference\n", ((double) (stop.tv_sec - start.tv_sec) * 1000)
-                        	+ ((double) (stop.tv_usec - start.tv_usec) /1000));
+					gettimeofday(&stop, NULL);
+                        		printf("%f difference\n", ((double) (stop.tv_sec - start.tv_sec) * 1000)
+                        		+ ((double) (stop.tv_usec - start.tv_usec) /1000));
+				}else{
+					printf("Referenced image not found in workspace.\n");
+				}
 			}else{
-				printf("Referenced image not found in workspace.\n");
+				printf("This operation requires an image object and a degree value to complete\n");
 			}
 		}
 		/* Flip an image upside down by complementing the position of the pixels */
@@ -655,33 +673,38 @@ int main(void){
                         struct entity new_img;
                         struct entity old_img;
                         strcpy(new_img.name, res_words[1]);
-                        int factor = atoi(res_words[3]);
 
-                        old_img = image_find(res_words[2], entities, index);
+			if(strcmp(res_words[2], "") && strcmp(res_words[3], "")){
+                        	int factor = atof(res_words[3]);
 
-			if(old_img.im != NULL){
-				/* Magnify/Minify */
-                        	gdImageSetInterpolationMethod(old_img.im, GD_BSPLINE);
-				if(!strcmp(res_words[0], "magnify")){
-					new_img.width = old_img.width * factor;
-                        		new_img.height = old_img.height * factor;
-                        		new_img.im = gdImageScale(old_img.im, new_img.height, new_img.width);
+                        	old_img = image_find(res_words[2], entities, index);
+
+				if(old_img.im != NULL){
+					/* Magnify/Minify */
+                        		gdImageSetInterpolationMethod(old_img.im, GD_BSPLINE);
+					if(!strcmp(res_words[0], "magnify")){
+						new_img.width = old_img.width * factor;
+                        			new_img.height = old_img.height * factor;
+                        			new_img.im = gdImageScale(old_img.im, new_img.height, new_img.width);
+					}else{
+						new_img.width = old_img.width / factor;
+                                		new_img.height = old_img.height / factor;
+                                		new_img.im = gdImageScale(old_img.im, new_img.height, new_img.width);
+					}
+
+					printf("Image successfully scaled\n");
+
+					entities[index] = new_img;
+					index++;
+
+					gettimeofday(&stop, NULL);
+                        		printf("%f difference\n", ((double) (stop.tv_sec - start.tv_sec) * 1000)
+                        		+ ((double) (stop.tv_usec - start.tv_usec) /1000));
 				}else{
-					new_img.width = old_img.width / factor;
-                                	new_img.height = old_img.height / factor;
-                                	new_img.im = gdImageScale(old_img.im, new_img.height, new_img.width);
+					printf("Referenced image not found in workspace.\n");
 				}
-
-				printf("Image successfully scaled\n");
-
-				entities[index] = new_img;
-				index++;
-
-				gettimeofday(&stop, NULL);
-                        	printf("%f difference\n", ((double) (stop.tv_sec - start.tv_sec) * 1000)
-                        	+ ((double) (stop.tv_usec - start.tv_usec) /1000));
 			}else{
-				printf("Referenced image not found in workspace.\n");
+				printf("This operation requires an image object and a factor (float) to complete\n");
 			}
 		}
 		/* Modify an image to show edges more clearly using the sobel operator */
